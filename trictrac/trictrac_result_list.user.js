@@ -3,9 +3,11 @@
 // @namespace   http://www.trictrac.net/
 // @grant       none
 
+// @require		lib/htmlTag.js
+
 // @include     http://www.trictrac.net/recherche*
 
-// @version     0.1
+// @version     0.2
 // ==/UserScript==
 
 // ----- Find the research terms (to sort relevent results) ----- //
@@ -24,21 +26,32 @@ divBody.style.display = "none";
 // --------------- Create our own result list --------------- //
 var divMyResultsList = document.createElement("div");
 
+var divExactResult = document.createElement("div");
+var txtExact = document.createTextNode("Correspondance(s) exacte(s)");
+divExactResult.appendChild(txtExact);
+divExactResult.style.fontWeight = "bold";
+divExactResult.style.marginBottom = "15px";
+
 var divReleventResult = document.createElement("div");
-var txtRelevent = document.createTextNode("Pertinent");
+var txtRelevent = document.createTextNode("Pertinent(s)");
 divReleventResult.appendChild(txtRelevent);
 divReleventResult.style.fontWeight = "bold";
 divReleventResult.style.marginBottom = "15px";
 
 var divIrreleventResult = document.createElement("div");
-var txtIrrelevent = document.createTextNode("Non-pertinent");
+var txtIrrelevent = document.createTextNode("Non-pertinent(s)");
 divIrreleventResult.appendChild(txtIrrelevent);
 divIrreleventResult.style.fontWeight = "bold";
 
 // ----- Loop on results ----- //
 var divList = findChild("DIV", divBody);
+
 var divResults = findChildren("DIV", divList);
 var nbResult = divResults.length;
+
+var nbExact = 0;
+var nbRelevent = 0;
+var nbIrrelevent = 0;
 for(var i = 0; i < nbResult; i++)
 {
     var divResultWrapper = divResults[i];
@@ -66,16 +79,33 @@ for(var i = 0; i < nbResult; i++)
     divMyResult.style.marginBottom = "5px";
     
     // ----- Append custom div to results div ---- //
-    if(txtName.nodeValue.toLowerCase().trim().indexOf(searchValue) >= 0)
+    var washedName = txtName.nodeValue.toLowerCase().trim();
+    if(washedName == searchValue)
+    {
+        divExactResult.appendChild(divMyResult);
+        nbExact++;
+    }
+    else if(washedName.indexOf(searchValue) >= 0)
+    {
     	divReleventResult.appendChild(divMyResult);
+        nbRelevent++;
+    }
     else
+    {
     	divIrreleventResult.appendChild(divMyResult);
+        nbIrrelevent++;
+    }
 }
 
 var divFooter = divSearch.removeChild(divSearch.lastChild);
 
-divMyResultsList.appendChild(divReleventResult);
-divMyResultsList.appendChild(divIrreleventResult);
+if(nbExact > 0)
+	divMyResultsList.appendChild(divExactResult);
+if(nbRelevent > 0)
+	divMyResultsList.appendChild(divReleventResult);
+if(nbIrrelevent > 0)
+	divMyResultsList.appendChild(divIrreleventResult);
+
 divSearch.appendChild(divMyResultsList);
 
 divSearch.appendChild(divFooter);
