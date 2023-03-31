@@ -1,0 +1,101 @@
+// ==UserScript==
+// @name         Ludigay
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Remove product not in stock. Remove also list of games. See below.
+// @author       Pumbaa
+// @match        http*://www.ludibay.net/destock.php*
+// @match        http*://www.ludibay.net/flash_selling.php*
+// @match        http*://www.ludibay.net/products_new.php*
+// @grant        none
+// ==/UserScript==
+
+var inDestock = window.location.href.includes("destock.php");
+var inFlash = window.location.href.includes("flash_selling.php");
+var inNew = window.location.href.includes("products_new.php");
+
+var blackListTitles = ["runequest", "warhammer", "trône de fer", "cthulhu"]; // en lowercase !
+
+function getNthParent(node, nthParent)
+{
+    return getNthParentRec(node, nthParent, 0);
+}
+
+function getNthParentRec(node, nthParent, level)
+{
+    var parent = node.parentElement;
+    if(level >= nthParent)
+        return parent;
+    return getNthParentRec(parent, nthParent, level+1);
+}
+
+function titleInBlacklist(title)
+{
+    title = title.toLowerCase();
+    for(var i = 0; i < blackListTitles.length; i++)
+        if(title.includes(blackListTitles[i]))
+            return true;
+    return false;
+}
+
+function purge()
+{
+    var tdButtons = document.getElementsByTagName("td");
+    var nbRemoved = 0;
+    for (var i = tdButtons.length - 1; i >= 0; i--)
+    {
+        // Find button "Ajouter au panier"
+        var tdButton = tdButtons[i];
+        if(!tdButton.classList.contains("buttonltb"))
+            continue;
+        var tdButtonA = tdButton.firstElementChild;
+        var tdButtonAText = tdButtonA.childNodes[0];
+        if(tdButtonAText.nodeValue != "Ajouter au panier")
+            continue;
+
+        var trRoot = getNthParent(tdButtonA, 9);
+
+        // Get game name
+        var trTitle = getNthParent(tdButtonA, 5);
+        var tdTitle = trTitle.children[1];
+        var aTitle = tdTitle.firstChild;
+        var bTitle = aTitle.firstChild;
+        var txtTitle = bTitle.childNodes[0];
+        var title = txtTitle.nodeValue;
+        if(titleInBlacklist(title))
+        {
+            trRoot.parentElement.removeChild(trRoot);
+            nbRemoved++;
+            continue;
+        }
+
+        // Check availability
+        var tdRupture = trRoot.children[0];
+        var tableRupture = tdRupture.children[0];
+        var tbodyRupture = tableRupture.children[0];
+        var trRupture2 = tbodyRupture.children[1];
+        var tdRupture2 = trRupture2.children[0];
+        var tableRupture2 = tdRupture2.children[0];
+        var tbodyRupture2 = tableRupture2.children[0];
+        var trRupture3 = tbodyRupture2.children[0];
+
+        var tdRupture3;
+        if(inDestock)
+            tdRupture3 = trRupture3.children[0];
+        else if(inFlash)
+            tdRupture3 = trRupture3.children[1];
+        else if(inNew)
+            tdRupture3 = trRupture3.children[0];
+
+        var imgRupture = tdRupture3.children[0];
+        var imgRuptureTitle = imgRupture.title;
+        if(imgRuptureTitle == "Rupture provisoire")
+        {
+            trRoot.parentElement.removeChild(trRoot);
+            nbRemoved++;
+            continue;
+        }
+    }
+    //alert("removed : "+nbRemoved);
+}
+purge();
